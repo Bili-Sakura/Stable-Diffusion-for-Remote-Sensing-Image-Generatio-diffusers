@@ -10,9 +10,23 @@ A simple project for `text-to-image remote sensing image generation`,
 and we will release the code of `using multiple text to control regions for super-large RS image generation` later.
 Also welcome to see the project of [image-condition fake sample generation](https://github.com/xiaoyuan1996/Controllable-Fake-Sample-Generation-for-RS) in [TGRS, 2023](https://ieeexplore.ieee.org/abstract/document/10105619/).
 
-##  Environment configuration
+## Environment configuration
 
-Follow and thanks [original training repo](https://github.com/justinpinkney/stable-diffusion.git) .
+This repository now supports a **diffusers-native** workflow for training, inference, and checkpoint conversion.
+
+Install dependencies for the new workflow:
+
+```bash
+pip install -r requirements-diffusers.txt
+```
+
+Optional: use local editable Hugging Face diffusers source inside this repo:
+
+```bash
+git clone https://github.com/huggingface/diffusers.git external/diffusers
+```
+
+All new scripts automatically use `external/diffusers/src` when present.
 
 
 ## Pretrained weights
@@ -21,32 +35,61 @@ We used RS image-text dataset [RSITMD](https://github.com/xiaoyuan1996/AMFMN) as
 When the batchsize is 4, the GPU memory consumption is about 40+ Gb during training, and about 20+ Gb during sampling.
 The pretrain weights is realesed at [last-pruned.ckpt](https://drive.google.com/drive/folders/10vK3eNpIw7H3lxxZbB7NF2IZktGt95As?usp=sharing).
 
-## Using
+## Using (diffusers-native)
 
-### Samling
-Download the pretrain weights `last-pruned.ckpt` to current dir, and run with:
-```commandline
-python scripts/txt2img.py \
-    --prompt 'Some boats drived in the sea' \
-    --outdir 'outputs/RS' \
-    --H 512 --W 512 \
-    --n_samples 4 \
-    --config 'configs/stable-diffusion/RSITMD.yaml' \
-    --ckpt './last-pruned.ckpt'
+### 1) Convert checkpoint to diffusers format
+
+General converter:
+
+```bash
+python scripts/convert_ckpt_to_diffusers_native.py \
+  --checkpoint_path ./last-pruned.ckpt \
+  --original_config_file ./configs/stable-diffusion/RSITMD.yaml \
+  --output_path ./outputs/rsitmd-diffusers
 ```
 
-### Traing
-Put images of [RSITMD](https://github.com/xiaoyuan1996/AMFMN) in `data/RSITMD/images`, and run with:
-```commandline
-python main.py \
-    -t \
-    --base configs/lammbda/RSITMD.yaml \
-    --gpus 1 \
-    --scale_lr False \
-    --num_nodes 1 \
-    --check_val_every_n_epoch 10 \
-    --finetune_from './last-pruned.ckpt'
+RSITMD shortcut:
+
+```bash
+python scripts/convert_rsitmd_ckpt_to_diffusers.py \
+  --checkpoint_path ./last-pruned.ckpt \
+  --output_path ./outputs/rsitmd-diffusers
 ```
+
+### 2) Inference with native diffusers
+
+```bash
+python scripts/diffusers_txt2img.py \
+  --model_path ./outputs/rsitmd-diffusers \
+  --prompt "Some boats drived in the sea" \
+  --outdir outputs/RS \
+  --height 512 \
+  --width 512 \
+  --num_images 4
+```
+
+### 3) Training with native diffusers + accelerate
+
+Put RSITMD images under `data/RSITMD/images`, then run:
+
+```bash
+accelerate launch scripts/diffusers_train_rsitmd.py \
+  --pretrained_model_name_or_path runwayml/stable-diffusion-v1-5 \
+  --train_json_path data/RSITMD/hf_train.json \
+  --data_root data/RSITMD \
+  --output_dir outputs/diffusers-rsitmd \
+  --resolution 512 \
+  --train_batch_size 4 \
+  --num_train_epochs 10 \
+  --learning_rate 1e-5
+```
+
+### Legacy entrypoints (deprecated)
+
+- `python main.py ...`
+- `python scripts/txt2img.py ...`
+
+The legacy LDM pipeline is kept for compatibility only; prefer the diffusers-native scripts above.
 
 
 ## Examples
