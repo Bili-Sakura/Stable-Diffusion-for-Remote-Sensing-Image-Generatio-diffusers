@@ -61,7 +61,7 @@ python scripts/convert_rsitmd_ckpt_to_diffusers.py \
 ```bash
 python scripts/diffusers_txt2img.py \
   --model_path ./outputs/rsitmd-diffusers \
-  --prompt "Some boats drived in the sea" \
+  --prompt "Some boats drove in the sea" \
   --outdir outputs/RS \
   --height 512 \
   --width 512 \

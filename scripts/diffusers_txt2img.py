@@ -44,7 +44,7 @@ def main():
     pipe = StableDiffusionPipeline.from_pretrained(args.model_path, torch_dtype=dtype)
     pipe = pipe.to(device)
 
-    generator = torch.Generator(device=device.type).manual_seed(args.seed)
+    generator = torch.Generator(device=str(device)).manual_seed(args.seed)
     output = pipe(
         prompt=[args.prompt] * args.num_images,
         negative_prompt=[args.negative_prompt] * args.num_images if args.negative_prompt else None,

@@ -96,6 +96,7 @@ def main():
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
     unet.train()
+    vae_scaling_factor = vae.config.scaling_factor
 
     train_dataset = RSITMDDataset(
         json_path=args.train_json_path,
@@ -169,7 +170,7 @@ def main():
         for step, batch in enumerate(train_dataloader):
             with accelerator.accumulate(unet):
                 latents = vae.encode(batch["pixel_values"].to(accelerator.device)).latent_dist.sample()
-                latents = latents * vae.config.scaling_factor
+                latents = latents * vae_scaling_factor
 
                 noise = torch.randn_like(latents)
                 bsz = latents.shape[0]
